@@ -1,0 +1,27 @@
+{
+  "name": "image-export-nodejs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon ./src/main.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@koa/router": "^11.0.2",
+    "archiver": "^6.0.1",
+    "dotenv": "^16.3.1",
+    "image-size": "^1.0.2",
+    "image-type": "^5.2.0",
+    "jszip": "^3.10.1",
+    "koa": "^2.14.2",
+    "koa-bodyparser": "^4.4.1",
+    "puppeteer": "^21.4.0",
+    "sharp": "^0.32.6",
+    "svg-parser": "^2.0.4",
+    "xml2js": "^0.6.2"
+  }
+}
