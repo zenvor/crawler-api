@@ -57,15 +57,17 @@ router.post('/download/multiple', async (ctx, next) => {
   console.log('imageIds: ', imageIds)
 
   const zip = new JSZip()
-  let zipName
-
+  let zipName,index = 0
   for (const imageId of imageIds) {
+    index++
+    index = index < 10 ? `0${index}` : index
+
     for (const item of imageBuffers) {
       if (imageId == item.id) {
-        const imageBuffer = item.imageBuffer
-        const fileName = item.name + '.' + item.type
-        zipName = item.zipName
 
+        const imageBuffer = item.imageBuffer
+        const fileName = `${item.name}_${index}` + '.' + item.type
+        zipName = item.zipName
         // 将图片添加到ZIP文件中
         zip.file(fileName, imageBuffer)
         break

@@ -71,15 +71,15 @@ export default class ImageExtractor {
       // 创建一个新的页面
       const page = await this.navigationBrowser.newPage()
       // 设置视口大小
-      await page.setViewport({ width: 1600, height: 700 })
+      await page.setViewport({ width: 1600, height: 1000 })
       // 配置导航超时
       // 设置访问图片的超时时间为 300 秒
-      const timeoutMilliseconds = 1000 * 300
+      const timeoutMilliseconds = 1000 * 500
       // 导航到您想要获取HTML的网址 ['load', 'domcontentloaded', 'networkidle0', 'networkidle2']
       await page.goto(link, { waitUntil: 'networkidle0', timeout: timeoutMilliseconds })
 
       // 等待一段时间
-      // await new Promise((resolve) => setTimeout(resolve, 2000))
+      await new Promise((resolve) => setTimeout(resolve, 2000))
 
       await page.evaluate(async () => {
         // 异步滚动函数，接受两个参数：最大已滚动距离和回调函数
@@ -218,12 +218,14 @@ export default class ImageExtractor {
         return elements
           .map((element) => {
             if (element.tagName === 'A') {
-              const url = element.getAttribute('href')
-              if (isImageLink(url)) return handleImageLink(url, protocolAndDomain)
+              let url = element.getAttribute('href')
+              url = handleImageLink(url, protocolAndDomain)
+              if (isImageLink(url)) return url
               return null
             } else if (element.tagName === 'IMG') {
               let url = element.getAttribute('src')
-              if (url) return handleImageLink(url, protocolAndDomain)
+              url = handleImageLink(url, protocolAndDomain)
+              if (url) return url
               return null
             } else if (element.tagName === 'svg') {
               const svgContent = new XMLSerializer().serializeToString(element)
@@ -232,14 +234,16 @@ export default class ImageExtractor {
               console.log('encodedSvgContent: ', encodedSvgContent)
               return `data:image/svg+xml,${encodedSvgContent}`
             } else if (element.tagName === 'META') {
-              const content = element.getAttribute('content')
-              if (isImageLink(content)) return handleImageLink(content, protocolAndDomain)
+              let content = element.getAttribute('content')
+              content = handleImageLink(content, protocolAndDomain)
+              if (isImageLink(content)) return content
               return null
             }
             return null // 返回 null 表示不是图片链接
           })
           .filter((link) => link !== null)
           .concat(extractImagesFromCssStyles())
+          .concat(extractFavicon())
 
         function extractImagesFromCssStyles() {
           const elements = document.querySelectorAll('[class]')
@@ -282,13 +286,22 @@ export default class ImageExtractor {
           return images
         }
 
-        function handleImageLink(url, protocolAndDomain) {
-          url = url.replace(/_webp$/, '')
+        function extractFavicon() {
+          const href =
+            document.querySelector('link[rel="shortcut icon"]')?.href ||
+            document.querySelector('link[rel="icon"]')?.href
+          if (href) return [href]
+        }
 
-          if (!url.startsWith('http')) {
-            return (url = `${protocolAndDomain}` + url)
-          } else {
-            return url
+        function handleImageLink(url, protocolAndDomain) {
+          if (url) {
+            url = url.replace(/_webp$/, '')
+
+            if (!url.startsWith('http')) {
+              return (url = `${protocolAndDomain}` + url)
+            } else {
+              return url
+            }
           }
         }
 
@@ -299,7 +312,7 @@ export default class ImageExtractor {
          */
         function isImageLink(url) {
           // 定义一个正则表达式，匹配以常见图片文件扩展名结尾的字符串
-          let regex = /\.(jpg|jpeg|png|gif|bmp|webp|svg|tiff)$/i // 使用不区分大小写的标志 'i'
+          let regex = /(https?:\/\/).*\.(jpg|jpeg|png|gif|bmp|webp|svg|tiff)$/i // 使用不区分大小写的标志 'i'
           // 调用test()方法，检查url是否符合正则表达式
           return regex.test(url)
         }
@@ -313,9 +326,18 @@ export default class ImageExtractor {
           try {
             // 设置访问图片的超时时间为 180 秒
             const timeoutMilliseconds = 1000 * 180
-            let imageBuffer = await page
-              .goto(url, { timeout: timeoutMilliseconds })
-              .then((response) => response.buffer())
+            const response = await page.goto(url, { timeout: timeoutMilliseconds })
+            let imageBuffer
+            const contentType = response.headers()['content-type']
+
+            if (contentType && contentType.startsWith('image/')) {
+              console.log('This response is an image.')
+              imageBuffer = await response.buffer()
+            } else {
+              console.log('This response is not an image.')
+              return resolve()
+            }
+
             let type, name, width, height, imageSize, fileSize
             const id = generateId()
             const zipName = parseLinkReturnDomain(link) + '-' + new Date().getTime()
@@ -382,7 +404,7 @@ export default class ImageExtractor {
               id: id ?? null,
               url: url ?? null,
               name: name ?? null,
-              type: type ?? null,
+              type: type ?? 'Unknown',
               width: width ?? null,
               height: height ?? null,
               imageSize: imageSize ?? null,
@@ -393,7 +415,7 @@ export default class ImageExtractor {
               id: id ?? null,
               zipName: zipName ?? null,
               name: name ?? null,
-              type: type ?? null,
+              type: type ?? 'Unknown',
               imageBuffer: imageBuffer ?? null,
             })
             resolve()
@@ -515,7 +537,7 @@ export default class ImageExtractor {
        */
       function isImageLink(url) {
         // 定义一个正则表达式，匹配以常见图片文件扩展名结尾的字符串
-        let regex = /\.(jpg|jpeg|png|gif|bmp|webp|svg|tiff)$/i // 使用不区分大小写的标志 'i'
+        let regex = /(https?:\/\/).*\.(jpg|jpeg|png|gif|bmp|webp|svg|tiff)$/i // 使用不区分大小写的标志 'i'
         // 调用test()方法，检查url是否符合正则表达式
         return regex.test(url)
       }
@@ -549,7 +571,10 @@ export default class ImageExtractor {
           // 取数组的最后一个元素，即文件名字
           let fileName = parts[parts.length - 1]
           if (fileName.includes('?')) fileName = fileName.split('?')[0]
-          if (isImageLink(fileName)) {
+
+          let re = /\.\w+$/ // 定义一个正则表达式，匹配以.开头的任意字母或数字结尾的部分
+          if (re.test(fileName)) {
+            // 如果文件名匹配正则表达式，说明已经有文件扩展名
             // 用"."分割文件名字，得到一个数组
             let subparts = fileName.split('.')
             // 取数组的第一个元素，即图片名字
@@ -560,6 +585,7 @@ export default class ImageExtractor {
               fileName: fileName,
             }
           } else {
+            // 否则，说明没有文件扩展名
             let imageName = id
             let fileName = null
             // 返回文件名字
@@ -595,11 +621,18 @@ export default class ImageExtractor {
               break
             // 其他类型可以自行添加
             default:
-              extension = '.unknown'
+              extension = null
           }
 
           let imageName = id
-          let fileName = id + extension
+          let fileName = ''
+
+          if (extension) {
+            fileName = id + extension
+          } else {
+            fileName = null
+          }
+
           // 返回文件名字
           return {
             imageName,
