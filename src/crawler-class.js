@@ -30,9 +30,9 @@ export default class ImageExtractor {
   }
 
   start() {
-    return new Promise(async (resolve, reject) => {
+    return new Promise(async (resolve) => {
       // 启动一个全局浏览器实例
-      this.globalBrowser = await puppeteer.launch({ headless: false })
+      this.globalBrowser = await puppeteer.launch({ headless: 'new' })
 
       switch (this.extractMode) {
         case 'singleSite':
@@ -67,7 +67,7 @@ export default class ImageExtractor {
     console.log('link: ', link)
     return new Promise(async (resolve) => {
       // 启动一个新的浏览器实例
-      this.navigationBrowser = await puppeteer.launch({ headless: false })
+      this.navigationBrowser = await puppeteer.launch({ headless: 'new' })
       // 创建一个新的页面
       const page = await this.navigationBrowser.newPage()
       // 设置视口大小
@@ -76,8 +76,11 @@ export default class ImageExtractor {
       // 设置访问图片的超时时间为 300 秒
       const timeoutMilliseconds = 1000 * 500
       // 导航到您想要获取HTML的网址 ['load', 'domcontentloaded', 'networkidle0', 'networkidle2']
-      await page.goto(link, { waitUntil: 'networkidle0', timeout: timeoutMilliseconds })
-
+      try {
+        await page.goto(link, { waitUntil: 'networkidle0', timeout: timeoutMilliseconds })
+      } catch (error) {
+        console.log('error: ', error);
+      }
       // 等待一段时间
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
