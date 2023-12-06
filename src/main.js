@@ -16,7 +16,6 @@ app.use(KoaBodyParser())
 
 router.post('/extractions', async (ctx, next) => {
   try {
-    console.log('ctx: ', ctx.request.body)
     // 从请求体中获取前端传来的 URL
     const { url } = ctx.request.body
     config.targetCrawlingWebPageLink = url

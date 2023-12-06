@@ -1,6 +1,5 @@
 import puppeteer from 'puppeteer'
-// 检验并生成一个符合 Windows 文件命名规则的文件名
-import { validateAndModifyFileName } from './utils/validate-and-modify-file-name.js'
+import { WebSocketServer } from 'ws'
 // 根据缩略图获取原图
 import { generateOriginalImageUrl } from './utils/generate-original-image-url.js'
 // 解析链接
@@ -11,6 +10,21 @@ import xml2js from 'xml2js'
 import sharp from 'sharp'
 import SvgParser from 'svg-parser'
 const svgParser = SvgParser.parse
+
+const wss = new WebSocketServer({ port: 8080 })
+let globalWs = null
+
+wss.on('connection', (ws) => {
+  globalWs = ws
+  console.log('客户端已连接')
+
+  ws.on('message', (message) => {
+    // 收到消息
+    console.log('收到消息: ', message)
+  })
+
+  ws.send(JSON.stringify({ message: 'Waiting for browser...', progress: 5 }))
+})
 
 export default class ImageExtractor {
   constructor(config) {
@@ -32,26 +46,32 @@ export default class ImageExtractor {
   start() {
     return new Promise(async (resolve) => {
       // 启动一个全局浏览器实例
-      this.globalBrowser = await puppeteer.launch({ headless: 'new' })
+      this.globalBrowser = await puppeteer.launch({ headless: false })
 
       switch (this.extractMode) {
         case 'singleSite':
           console.log('\x1b[36m%s\x1b[0m', '开始计时')
           console.time('download time')
 
-          const result = await this.extractImages(this.targetCrawlingWebPageLink)
-          resolve(result)
-          console.log('this.targetCrawlingWebPageLink: ', this.targetCrawlingWebPageLink)
+          try {
+            const result = await this.extractImages(this.targetCrawlingWebPageLink)
+            resolve(result)
+            console.log('this.targetCrawlingWebPageLink: ', this.targetCrawlingWebPageLink)
+          } catch (error) {
+            console.log('error: ', error)
+          }
+
           break
         case 'multipleSites':
           for (const link of this.targetCrawlingWebPageLinks) {
-            if (link) {
-              console.log('\x1b[36m%s\x1b[0m', '开始计时')
-              console.time('download time')
-
+            console.log('\x1b[36m%s\x1b[0m', '开始计时')
+            console.time('download time')
+            try {
               const result = await this.extractImages(link)
               resolve(result)
               console.log('link: ', link)
+            } catch (error) {
+              console.log('error: ', error)
             }
           }
           break
@@ -64,25 +84,50 @@ export default class ImageExtractor {
    * @param {string} link
    */
   extractImages(link) {
-    console.log('link: ', link)
+    if (!link) return
     return new Promise(async (resolve) => {
       // 启动一个新的浏览器实例
-      this.navigationBrowser = await puppeteer.launch({ headless: 'new' })
+      this.navigationBrowser = await puppeteer.launch({ headless: false })
+
+      globalWs.send(JSON.stringify({ message: 'Waiting for browser...', progress: 10 }))
+
       // 创建一个新的页面
       const page = await this.navigationBrowser.newPage()
+
+      globalWs.send(JSON.stringify({ message: 'Waiting for browser...', progress: 15 }))
+
       // 设置视口大小
       await page.setViewport({ width: 1600, height: 1000 })
-      // 配置导航超时
       // 设置访问图片的超时时间为 300 秒
       const timeoutMilliseconds = 1000 * 500
-      // 导航到您想要获取HTML的网址 ['load', 'domcontentloaded', 'networkidle0', 'networkidle2']
+
+      globalWs.send(JSON.stringify({ message: 'Waiting for browser...', progress: 20 }))
+
       try {
+        globalWs.send(JSON.stringify({ message: 'Loading page...', process: 25 }))
+
+        setTimeout(() => {
+          globalWs.send(JSON.stringify({ message: 'Loading page...', process: 30 }))
+        }, 200);
+
+        setTimeout(() => {
+          globalWs.send(JSON.stringify({ message: 'Loading page...', process: 35 }))
+        }, 1000)
+        // 导航到您想要获取HTML的网址 ['load', 'domcontentloaded', 'networkidle0', 'networkidle2']
         await page.goto(link, { waitUntil: 'networkidle0', timeout: timeoutMilliseconds })
+
+        globalWs.send(JSON.stringify({ message: 'Loading page...', process: 40 }))
       } catch (error) {
-        console.log('error: ', error);
+        console.log('error: ', error)
       }
       // 等待一段时间
       await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      globalWs.send(JSON.stringify({ message: 'Scrolling down...', process: 45 }))
+
+      setTimeout(() => {
+        globalWs.send(JSON.stringify({ message: 'Scrolling down...', process: 50 }))
+      }, 1000)
 
       await page.evaluate(async () => {
         // 异步滚动函数，接受两个参数：最大已滚动距离和回调函数
@@ -186,34 +231,42 @@ export default class ImageExtractor {
         await autoScroll(20000)
       })
 
+      globalWs.send(JSON.stringify({ message: 'Scrolling down...', process: 60 }))
+
       // 滚动到底部
-      async function scrollToEnd(page) {
-        return await page.evaluate(async () => {
-          return new Promise((resolve) => {
-            let lastScrollTime = Date.now() // 记录最后一次滚动的时间
-            window.onscroll = () => {
-              // 监听滚动事件
-              lastScrollTime = Date.now() // 更新最后一次滚动的时间
-            }
-            let timerId = setInterval(() => {
-              // 定时检查是否停止滚动
-              if (Date.now() - lastScrollTime > 1000) {
-                // 如果超过1000ms没有滚动
-                clearInterval(timerId) // 清除定时器
-                resolve() // 结束Promise
-              } else {
-                // 如果还在滚动
-                window.scrollBy(0, 500) // 滚动一段距离
-              }
-            }, 100)
-          })
-        })
-      }
+      // async function scrollToEnd(page) {
+      //   return await page.evaluate(async () => {
+      //     return new Promise((resolve) => {
+      //       let lastScrollTime = Date.now() // 记录最后一次滚动的时间
+      //       window.onscroll = () => {
+      //         // 监听滚动事件
+      //         lastScrollTime = Date.now() // 更新最后一次滚动的时间
+      //       }
+      //       let timerId = setInterval(() => {
+      //         // 定时检查是否停止滚动
+      //         if (Date.now() - lastScrollTime > 1000) {
+      //           // 如果超过1000ms没有滚动
+      //           clearInterval(timerId) // 清除定时器
+      //           resolve() // 结束Promise
+      //         } else {
+      //           // 如果还在滚动
+      //           window.scrollBy(0, 500) // 滚动一段距离
+      //         }
+      //       }, 100)
+      //     })
+      //   })
+      // }
 
       // 获取页面标题
       this.title = await page.title()
 
       const { protocolAndDomain } = parseLink(link)
+
+      globalWs.send(JSON.stringify({ message: 'Finding images...', progress: 65 }))
+
+      globalWs.send(JSON.stringify({ message: 'Finding images...', progress: 70 }))
+
+      globalWs.send(JSON.stringify({ message: 'Finding images...', progress: 75 }))
 
       let images = await page.evaluate((protocolAndDomain) => {
         const elements = Array.from(document.querySelectorAll('a, img, svg, meta')) // 获取所有的 a 和 img 元素
@@ -321,6 +374,8 @@ export default class ImageExtractor {
         }
       }, protocolAndDomain)
 
+      globalWs.send(JSON.stringify({ message: 'Finding images...', progress: 80 }))
+
       // 使用 Set 去重
       images = [...new Set(images)]
 
@@ -334,10 +389,10 @@ export default class ImageExtractor {
             const contentType = response.headers()['content-type']
 
             if (contentType && contentType.startsWith('image/')) {
-              console.log('This response is an image.')
+              // console.log('This response is an image.')
               imageBuffer = await response.buffer()
             } else {
-              console.log('This response is not an image.')
+              // console.log('This response is not an image.')
               return resolve()
             }
 
@@ -388,15 +443,31 @@ export default class ImageExtractor {
               } catch (error) {
                 console.error('Error:', error)
               }
+            } else if (isICO(imageBuffer)) {
+              // ICO 文件头部的固定字节
+              const ICO_HEADER_SIZE = 6
+
+              // 读取ICO头部信息
+              const iconHeader = imageBuffer.slice(0, ICO_HEADER_SIZE)
+              const iconType = iconHeader.readUInt16LE(2) // 图标类型，1 表示 ICO，2 表示 CUR
+              const numberOfImages = iconHeader.readUInt16LE(4) // 图像数量
+              // ICO 文件中每个图像的头部大小
+              const IMAGE_HEADER_SIZE = 16
+
+              // 读取第一个图像的头部信息
+              const imageHeader = imageBuffer.slice(ICO_HEADER_SIZE, ICO_HEADER_SIZE + IMAGE_HEADER_SIZE)
+
+              type = 'ico'
+              width = parseInt(imageHeader.readUInt8(0)) // 图像宽度
+              height = parseInt(imageHeader.readUInt8(1)) // 图像高度
+              imageSize = width * height
             } else {
               try {
                 const imageSizeResult = imgSize(imageBuffer)
 
                 type = getImageFormatFromBuffer(imageBuffer)
-
                 width = parseInt(imageSizeResult.width)
                 height = parseInt(imageSizeResult.height)
-
                 imageSize = width * height
               } catch (error) {
                 console.log('Error: ', error)
@@ -429,6 +500,10 @@ export default class ImageExtractor {
           }
         })
       }
+
+      globalWs.send(JSON.stringify({ message: 'Analyzing images...', process: 85 }))
+
+      globalWs.send(JSON.stringify({ message: 'Analyzing images...', process: 90 }))
 
       // 随机请求间隔（毫秒）
       let randomInterval = 0
@@ -470,6 +545,8 @@ export default class ImageExtractor {
 
       resolve({ images: this.images, imageBuffers: this.imageBuffers })
 
+      globalWs.send(JSON.stringify({ message: 'Done...', process: 100 }))
+
       this.navigationBrowser.close()
       this.globalBrowser.close()
 
@@ -482,6 +559,15 @@ export default class ImageExtractor {
         const avifHeader = buffer.toString('utf-8', 4, 12) // 读取文件头部的8个字符
         // 检查是否包含 "ftypavif"
         return avifHeader === 'ftypavif'
+      }
+
+      function isICO(buffer) {
+        // ICO文件的标识符：00 00 01 00
+        const icoIdentifier = Buffer.from([0x00, 0x00, 0x01, 0x00])
+
+        // 检查前4个字节是否匹配ICO标识符
+        const bufferPrefix = buffer.slice(0, 4)
+        return bufferPrefix.equals(icoIdentifier)
       }
 
       function generateId() {
@@ -644,23 +730,5 @@ export default class ImageExtractor {
         }
       }
     })
-  }
-
-  /**
-   * @description 判断文件名是否有包含文件扩展名，如果没有默认加上.png
-   * @param {*} filename
-   * @returns
-   */
-  addExtension(filename) {
-    // 定义一个函数，接受一个文件名作为参数
-    let ext = '.png' // 定义一个变量，存储默认的文件扩展名
-    let re = /\.\w+$/ // 定义一个正则表达式，匹配以.开头的任意字母或数字结尾的部分
-    if (re.test(filename)) {
-      // 如果文件名匹配正则表达式，说明已经有文件扩展名
-      return filename // 直接返回文件名
-    } else {
-      // 否则，说明没有文件扩展名
-      return filename + ext // 在文件名后面加上默认的文件扩展名，并返回
-    }
   }
 }
