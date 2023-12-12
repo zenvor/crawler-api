@@ -3,7 +3,7 @@
  * @param {string} link
  * @returns
  */
-export function parseLink(link) {
+export function parseUrl(link) {
   try {
     // 使用URL对象来解析链接
     const url = new URL(link)
@@ -27,6 +27,6 @@ export function parseLink(link) {
     }
   } catch (error) {
     // 如果解析失败，返回错误信息
-    console.error('解析图片链接失败: ' + error.message)
+    console.error('解析图像链接失败: ' + error.message)
   }
 }

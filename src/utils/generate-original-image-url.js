@@ -6,7 +6,6 @@
 
 export function generateOriginalImageUrl(thumbnailUrl, type) {
   if (thumbnailUrl.includes('https://i.pximg.net')) {
-    // 对于网站 "https://i.pximg.net"
     // 去掉缩略图链接中的`c/250x250_80_a2/`
     let originalUrl = thumbnailUrl.replace(/c\/250x250_80_a2\//, '')
     // 把缩略图链接中的`img-master`替换成`img-original`
@@ -16,14 +15,21 @@ export function generateOriginalImageUrl(thumbnailUrl, type) {
     originalUrl = originalUrl.replace(/_custom1200\.jpg|_square1200\.jpg/, '.jpg')
     // 返回原图链接
     return originalUrl
-  } else if (thumbnailUrl.includes('imx.to')) {
-    // 对于网站 "https://i001.imx.to"
+  } else if (thumbnailUrl.includes('.imx.to')) {
     // 将"/t/"替换为"/i/"
+    if (!thumbnailUrl.includes('/t/')) return ''
     return thumbnailUrl.replace('/t/', '/i/')
-  } else if (thumbnailUrl.includes('https://i8.vipr.im')) {
-    // 对于网站 "https://i8.vipr.im"
+  } else if (thumbnailUrl.includes('imx.to/upload/small')) {
+    // 将"/t/"替换为"/i/"
+    if (!thumbnailUrl.includes('/upload/small/')) return ''
+    return thumbnailUrl.replace('imx.to/upload/small/', 'i001.imx.to/i/')
+  }
+  else if (thumbnailUrl.includes('i8.vipr.im')) {
+    if (!thumbnailUrl.includes('/th/')) return ''
     // 将"/th/"替换为"/i/"
-    return thumbnailUrl.replace('/th/', '/i/')
+    let originalUrl = thumbnailUrl.replace('/th/', '/i/')
+    // originalUrl = originalUrl.replace('.jpg', '.jpeg')
+    return originalUrl
   } else if (thumbnailUrl.includes('https://c-ssl.dtstatic.com')) {
     // 把缩略图链接中的`dtstatic.com`替换成`duitang.com`
     let originalUrl = thumbnailUrl.replace('dtstatic.com', 'duitang.com')
@@ -32,6 +38,7 @@ export function generateOriginalImageUrl(thumbnailUrl, type) {
     // 返回原图链接
     return originalUrl
   } else if (thumbnailUrl.includes('https://thumbs2.imgbox.com')) {
+    if (!thumbnailUrl.includes('thumbs2')) return ''
     // 把缩略图链接中的`thumbs2`替换成`images2`
     let originalUrl = thumbnailUrl.replace('thumbs2', 'images2')
     // 把缩略图链接中的`_t`替换成`_o`
@@ -156,7 +163,37 @@ export function generateOriginalImageUrl(thumbnailUrl, type) {
     // originalUrl = originalUrl.replace(/\.webp[^/]*/, '/f=webp_c=png_bg=white')
     // 返回原图链接
     return originalUrl
-  } else {
+  } else if (thumbnailUrl.includes('https://x3vid.com')) {
+    if (!thumbnailUrl.includes('/thumbs/')) return ''
+    let originalUrl = thumbnailUrl.replace('/thumbs/', '/images/')
+    if (thumbnailUrl.includes('/ept')) originalUrl = originalUrl.replace('/ept', '/ep2')
+    if (thumbnailUrl.includes('__ept')) originalUrl = originalUrl.replace('__ept', '__ep5')
+    originalUrl = originalUrl.replace('_160', '_1000')
+    // 返回原图链接
+    return originalUrl
+  } else if (thumbnailUrl.includes('https://cdni.pornpics.com')) {
+    if (!thumbnailUrl.includes('/460/')) return ''
+    let originalUrl = thumbnailUrl.replace('/460/', '/1280/')
+    // 返回原图链接
+    return originalUrl
+  } else if (thumbnailUrl.includes('http://asiantgp.net')) {
+    if (!thumbnailUrl.includes('tn_')) return ''
+    let originalUrl = thumbnailUrl.replace('tn_', '')
+    // 返回原图链接
+    return originalUrl
+  } 
+  else if (thumbnailUrl.includes('https://www.sigmapic.com')) {
+    if (!thumbnailUrl.includes('/7_t')) return ''
+    let originalUrl = thumbnailUrl.replace('/7_t', '/7_553')
+    return originalUrl
+  } 
+  else if (thumbnailUrl.includes('pixhost.to')) {
+    if (!thumbnailUrl.includes('/thumbs')) return ''
+    let originalUrl = thumbnailUrl.replace('/thumbs', '/images')
+    originalUrl = thumbnailUrl.replace('//t', '//img')
+    return originalUrl
+  } 
+  else {
     // 如果是其他网站，返回原始链接
     return ''
   }
