@@ -47,7 +47,6 @@ export default class ImageExtractor {
       console.log('\x1b[36m%s\x1b[0m', `提取的链接${url}`)
 
       return new Promise(async (resolve) => {
-        console.log('this.browser: ', this.browser)
         // 启动一个新的浏览器实例
         this.browser = await puppeteer.launch({ headless: false })
 
@@ -79,8 +78,7 @@ export default class ImageExtractor {
         const response = await this.analyzingImages(images)
 
         globalWs.send(JSON.stringify({ message: 'Done...', progress: 100 }))
-        console.log('提取完成');
-        console.log('提取进度', '100%')
+        console.log('提取完成', '100%')
 
         resolve(response)
       })
@@ -177,7 +175,7 @@ export default class ImageExtractor {
       console.log('提取进度', '50%')
 
       await page.evaluate(async () => {
-        // 异步滚动函数，接受两个参数：最大已滚动距离和回调函数
+        // 异步滚动函数，接受一个参数：最大已滚动距离
         async function autoScroll(maxScroll) {
           return new Promise((resolve) => {
             let lastScrollTime = Date.now() // 记录最后一次滚动的时间
