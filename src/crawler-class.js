@@ -127,7 +127,7 @@ export default class ImageExtractor {
 
         setTimeout(() => {
           globalWs.send(JSON.stringify({ message: 'Loading page...', progress: 25 }))
-          console.log('加载页面...');
+          console.log('加载页面...')
           console.log('提取进度', '25%')
         }, 200)
 
@@ -149,7 +149,7 @@ export default class ImageExtractor {
         console.log('\x1b[36m%s\x1b[0m', `网页标题${this.title}`)
 
         globalWs.send(JSON.stringify({ message: 'Loading page...', progress: 40 }))
-        console.log('页面加载完成');
+        console.log('页面加载完成')
         console.log('提取进度', '40%')
       } catch (error) {
         console.log('error: ', error)
@@ -168,7 +168,7 @@ export default class ImageExtractor {
   scrollingDown(page) {
     return new Promise(async (resolve) => {
       globalWs.send(JSON.stringify({ message: 'Scrolling down...', progress: 45 }))
-      console.log('向下滚动...');
+      console.log('向下滚动...')
       console.log('提取进度', '45%')
 
       globalWs.send(JSON.stringify({ message: 'Scrolling down...', progress: 50 }))
@@ -236,7 +236,7 @@ export default class ImageExtractor {
       const { protocolAndDomain } = parseUrl(this.url)
 
       globalWs.send(JSON.stringify({ message: 'Finding images...', progress: 65 }))
-      console.log('查找图像...');
+      console.log('查找图像...')
       console.log('提取进度', '65%')
 
       globalWs.send(JSON.stringify({ message: 'Finding images...', progress: 70 }))
@@ -392,15 +392,17 @@ export default class ImageExtractor {
    * @returns
    */
   analyzingImages(images) {
-    setTimeout(() => {
-      globalWs.send(JSON.stringify({ message: 'Analyzing images...', progress: 85 }))
-      console.log('分析图像...');
-    }, 200)
+    if (this.matchingMechanism == 'default') {
+      setTimeout(() => {
+        globalWs.send(JSON.stringify({ message: 'Analyzing images...', progress: 85 }))
+        console.log('分析图像...')
+      }, 200)
 
-    setTimeout(() => {
-      globalWs.send(JSON.stringify({ message: 'Analyzing images...', progress: 90 }))
-      console.log('提取进度', '90%')
-    }, 500)
+      setTimeout(() => {
+        globalWs.send(JSON.stringify({ message: 'Analyzing images...', progress: 90 }))
+        console.log('分析图像...', '90%')
+      }, 500)
+    }
 
     return new Promise(async (resolve) => {
       // 启动一个全局浏览器实例
@@ -411,8 +413,8 @@ export default class ImageExtractor {
       const handleImage = (page, url) => {
         return new Promise(async (resolve) => {
           if (!url) return resolve()
-          console.log('-------------------------------------------------------------------------------');
-          console.log('当前正在分析的链接', url);
+          console.log('-------------------------------------------------------------------------------')
+          console.log('当前正在分析的链接', url)
           try {
             let imageBuffer, response, contentType
             // 设置访问图像的超时时间为 180 秒

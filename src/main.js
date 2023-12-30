@@ -6,6 +6,7 @@ import crypto from 'crypto'
 import { v4 } from 'uuid'
 import ImageExtractor from './crawler-class.js'
 import KoaBodyParser from 'koa-bodyparser'
+import cors from 'koa2-cors'
 import JSZip from 'jszip'
 import { WebSocketServer } from 'ws'
 import { SERVER_PORT } from './config/server.js'
@@ -17,6 +18,8 @@ const router = new KoaRouter()
 
 // 使用 bodyParser 中间件来解析请求体
 app.use(KoaBodyParser())
+// 使用 cors 中间件
+app.use(cors())
 
 const uuidV4 = v4
 
@@ -41,43 +44,45 @@ function generateUuid() {
   return uuidV4()
 }
 
-const wss = new WebSocketServer({ port: 8080 })
+router.post('/extractions', async (ctx, next) => {
+  const wss = new WebSocketServer({ port: 8080 })
 
-wss.on('connection', (ws) => {
-  console.log('The client is connected.')
+  wss.on('connection', (ws) => {
+    console.log('The client is connected.')
 
-  globalWs = ws
+    ws.send(JSON.stringify({ message: 'Waiting for browser...', progress: 5 }))
 
-  ws.on('message', async (message) => {
-    // 收到消息
-    console.log('收到消息: ', message.toString())
-    const parsedMessage = JSON.parse(message.toString())
-    status = parsedMessage.status
-    if (status == 'running') {
-      config.url = url
-      config.matchingMechanism = 'default'
-      const imageExtractor = new ImageExtractor(config)
-      const response = await imageExtractor.extractImages()
-      images = response.images
-      images_count = images.length
-      imageBuffers = response.imageBuffers
-    }
+    globalWs = ws
+
+    ws.on('message', async (message) => {
+      // 收到消息
+      console.log('收到消息: ', message.toString())
+      const parsedMessage = JSON.parse(message.toString())
+      status = parsedMessage.status
+      if (status == 'running') {
+        config.url = url
+        config.matchingMechanism = 'default'
+        const imageExtractor = new ImageExtractor(config)
+        const response = await imageExtractor.extractImages()
+        images = response.images
+        images_count = images.length
+        imageBuffers = response.imageBuffers
+      } else if (status == 'done') {
+        wss.close()
+      }
+    })
   })
 
-  ws.send(JSON.stringify({ message: 'Waiting for browser...', progress: 5 }))
-})
-
-router.post('/extractions', async (ctx, next) => {
   // FIXME: 暂时这样写
-  id = '',
-  url = '',
-  images = [],
-  images_count = 0,
-  imageBuffers = [],
-  originalImages = [],
-  originalImageBuffers = [],
-  originalImages_count = 0,
-  status = 'pending'
+  ;(id = ''),
+    (url = ''),
+    (images = []),
+    (images_count = 0),
+    (imageBuffers = []),
+    (originalImages = []),
+    (originalImageBuffers = []),
+    (originalImages_count = 0),
+    (status = 'pending')
 
   try {
     const requestBody = ctx.request.body
