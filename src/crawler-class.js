@@ -660,7 +660,7 @@ export default class ImageExtractor {
   matchTheOriginalImage(images, link) {
     return new Promise(async (resolve) => {
       let originalImageUrls = []
-      if (link.includes('https://www.eroticbeauties.net')) {
+      if (link.includes('eroticbeauties')) {
         // 使用 page.evaluate 方法在页面上下文中执行 JavaScript 代码
         originalImageUrls = await page.evaluate(() => {
           const spans = Array.from(document.querySelectorAll('span.jpg')) // 获取页面中所有具有 "jpg" 类名的 <span> 元素
@@ -670,7 +670,7 @@ export default class ImageExtractor {
 
           return dataSrcValues
         })
-      } else if (link.includes('http://www.alsasianporn.com')) {
+      } else if (link.includes('alsasianporn')) {
         originalImageUrls = await page.evaluate(() => {
           const as = Array.from(document.querySelectorAll('a[data-fancybox="gallery"]')) // 获取页面中所有具有 "jpg" 类名的 <span> 元素
 
@@ -679,7 +679,7 @@ export default class ImageExtractor {
 
           return hrefValues
         })
-      } else if (link.includes('https://www.japanesesexpic.me') || link.includes('http://www.asianpussypic.me')) {
+      } else if (link.includes('japanesesexpic') || link.includes('asianpussypic')) {
         originalImageUrls = await page.evaluate(() => {
           const as = Array.from(document.querySelectorAll('a[target="_blank"]')) // 获取页面中所有具有 "jpg" 类名的 <span> 元素
 
